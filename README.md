@@ -66,7 +66,7 @@ bash install.sh
 如果你要显式指定 Python：
 
 ```bash
-PYTHONPATH="$PWD/src" python3 scripts/setup_env.py --python /opt/homebrew/bin/python3.12
+PYTHONPATH="$PWD/src" python3 scripts/setup_env.py --python /path/to/python3.12
 ```
 
 ### Windows
@@ -103,14 +103,14 @@ PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py --help
 ### 安装入口
 
 ```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py install --python /opt/homebrew/bin/python3.12 --json
+PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py install --python /path/to/python3.12 --json
 ```
 
 如需在安装完成后立即下载 MinerU 模型：
 
 ```bash
 PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py install \
-  --python /opt/homebrew/bin/python3.12 \
+  --python /path/to/python3.12 \
   --preload-models \
   --model-source huggingface \
   --model-type all \
@@ -224,15 +224,13 @@ python3 ~/.claude/skills/pandoc_to_markdown/pandoc_to_markdown_skill.py \
 
 - MinerU 需要 Python `3.10-3.13`
 - 安装器会优先寻找可用的 `python3.13` / `python3.12` / `python3.11` / `python3.10`
-- 当前项目已验证 `/opt/homebrew/bin/python3.12` 可正常完成安装
+- 建议显式传入一个受支持版本的 Python，例如 `python3.12`
 
-## 已验证的路径
+## 验证范围
 
-当前这个仓库里已经验证通过：
-- `install.sh`
-- `scripts/setup_env.py --python /opt/homebrew/bin/python3.12`
-- `cli.py install --python /opt/homebrew/bin/python3.12 --json`
-- `cli.py doctor --json`
+当前仓库已覆盖：
+- 安装入口与托管环境创建
+- `doctor` 健康检查
 - `python3 -m unittest discover -s tests -v`
 - 通过 CLI 的 HTML → Markdown smoke test
 - 通过注册后 skill wrapper 的 `doctor` 与 HTML → Markdown smoke test

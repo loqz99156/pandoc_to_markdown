@@ -54,5 +54,5 @@
 - 验证通过：标准库单测、CLI doctor、CLI HTML 转换、skill wrapper doctor、skill wrapper HTML 转换。
 - PDF 首次模型下载现在会在运行时发出统一事件；CLI 文本模式会先告诉用户“正在下载模型，完成后继续转换”，并把关键下载进度实时打印出来。
 - `routing` payload 新增 `notices`，便于 `--json` 调用方判断本次转换是否经历了模型下载。
-- 实测：同一份 PDF 用 `MinerU` 已成功输出到 `outputs/`；`Marker` 已越过安装/下载阶段，但仍可能在 MPS/torch 布局识别阶段失败。
-- `Marker` 现在会在命中典型 MPS / torch / surya 崩溃时自动切到 CPU 重试，并向 CLI 文本模式发出明确提示；这份 `Economic-Index_v4_2026.01.14_g.pdf` 已由 CPU 回退成功产出到 `outputs/Economic-Index_v4_2026.01.14_g/Economic-Index_v4_2026.01.14_g.md`。
+- 实测：PDF 走 `MinerU` 已可成功输出到 `outputs/`；`Marker` 已越过安装/下载阶段，但仍可能在 MPS/torch 布局识别阶段失败。
+- `Marker` 现在会在命中典型 MPS / torch / surya 崩溃时自动切到 CPU 重试，并向 CLI 文本模式发出明确提示；CPU 回退路径已完成真实 PDF 验证。
