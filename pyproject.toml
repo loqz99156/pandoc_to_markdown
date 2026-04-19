@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pandoc-to-markdown"
+version = "0.1.0"
+description = "Local document to Markdown toolkit with pandoc, Marker, and MinerU backends."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "loqz" }]
+dependencies = []
+
+[project.scripts]
+ptm = "pandoc_to_markdown.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
