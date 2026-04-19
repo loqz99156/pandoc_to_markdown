@@ -1,11 +1,39 @@
 # pandoc-to-markdown
 
-一个可开源分发的本地文档转 Markdown 项目。
+一个面向本地文档转换的 Markdown 工具集，统一封装了 `pandoc`、`Marker` 和 `MinerU`，并提供可直接使用的 CLI、托管运行环境和 Claude Code skill。
 
-它把三件事放进了一个独立子项目里：
-- 统一 CLI：`src/pandoc_to_markdown/cli.py`
-- 托管安装与自检：`install` / `doctor`
-- Claude Code skill 薄入口：`.claude/skills/pandoc_to_markdown/`
+## 核心能力
+
+- 单一 CLI 入口，统一处理安装、自检和转换
+- 非 PDF 输入走 `pandoc`
+- PDF 输入按场景选择 `Marker` 或 `MinerU`
+- 使用项目内 `.venvs/` 隔离不同后端依赖
+- 自带 Claude Code skill 薄入口，便于在 Claude 中直接调用
+
+## 快速开始
+
+安装：
+
+```bash
+bash install.sh
+```
+
+自检：
+
+```bash
+PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py doctor --json
+```
+
+单文件转换：
+
+```bash
+PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
+  convert \
+  --mode single \
+  --paths "/path/to/book.html" \
+  --overwrite \
+  --json
+```
 
 当前路由规则：
 - 非 PDF：走 `pandoc`
