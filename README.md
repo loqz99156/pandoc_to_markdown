@@ -8,6 +8,7 @@
 - 非 PDF 输入走 `pandoc`
 - PDF 输入按场景选择 `Marker` 或 `MinerU`
 - 使用项目内 `.venvs/` 隔离不同后端依赖
+- 支持把 MinerU 模型收敛到项目内 `.models/`，便于整体迁移与清理
 - 自带 Claude Code skill 薄入口，便于在 Claude 中直接调用
 
 ## 快速开始
@@ -69,6 +70,7 @@ pandoc-to-markdown/
 ```text
 安装
 → 创建 .venvs/core、.venvs/marker、.venvs/mineru
+→ 迁移或下载 MinerU 模型到项目内 .models/mineru/
 → doctor 检查环境
 → Claude skill / CLI 接收参数
 → routing 判断输入类型
@@ -113,7 +115,7 @@ PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py doctor --json
 - 托管环境目录 `.venvs/`
 - `core` / `marker` / `mineru` 三个环境是否存在
 - `pandoc` / `marker_single` / `mineru` / `mineru-models-download`
-- MinerU 配置文件与模型来源
+- 项目内 MinerU 配置文件、模型目录与模型来源
 - 磁盘剩余空间
 
 说明：
@@ -246,6 +248,7 @@ python3 ~/.claude/skills/pandoc_to_markdown/pandoc_to_markdown_skill.py \
 - 换行策略：`wrap=none`
 - 链接风格：`reference-links`
 - 默认输出目录：项目目录下的 `outputs/`
+- MinerU 模型默认优先使用项目目录下的 `.models/mineru/`
 - 默认不覆盖已有文件，除非显式传 `--overwrite`
 
 ## Python 与依赖说明

@@ -45,8 +45,21 @@
 - [x] 跑通 `python3 -m unittest discover -s tests -v`
 - [x] 用真实 PDF 做一次 Marker smoke test
 
+## 本轮目标：MinerU 项目内模型目录
+
+- [ ] 在 `config.py` 中新增项目内 MinerU 模型 / 配置 / cache 路径常量
+- [ ] 在 `installer.py` 中新增项目内 MinerU 配置、迁移与下载环境装配
+- [ ] 让 `mineru_backend.py` 转换默认优先使用项目内本地模型
+- [ ] 让 `doctor.py` 报告项目内 MinerU 模型状态
+- [ ] 为 installer / doctor / CLI 增加项目内模型目录回归测试
+- [ ] 更新 `.gitignore`、`README.md` 与回顾
+- [ ] 跑通 `python3 -m unittest discover -s tests -v`
+- [ ] 跑通 `cli.py doctor --json`
+- [ ] 跑一次真实 MinerU PDF smoke test，确认走项目内模型
+
 ## 回顾
 
+- 遇到长时间无输出、CPU 为 0、无活跃外网连接且 `.incomplete` 文件不再更新的模型下载任务，可判定为卡住；应终止旧任务，只删除卡住的 `.incomplete` 与对应 `.lock`，再重跑原命令。
 - `doctor` 现在要求托管环境存在且各环境关键 CLI 可用，避免只看目录存在导致误报健康。
 - 新增 `unittest` 基线，覆盖 `routing.py`、`doctor.py`、`cli.py` 的关键行为与失败分支。
 - 已把 MinerU 模型下载接入统一安装链路：`install --preload-models` 会调用托管环境内的 `mineru-models-download`，独立脚本也复用同一实现。
@@ -56,3 +69,4 @@
 - `routing` payload 新增 `notices`，便于 `--json` 调用方判断本次转换是否经历了模型下载。
 - 实测：PDF 走 `MinerU` 已可成功输出到 `outputs/`；`Marker` 已越过安装/下载阶段，但仍可能在 MPS/torch 布局识别阶段失败。
 - `Marker` 现在会在命中典型 MPS / torch / surya 崩溃时自动切到 CPU 重试，并向 CLI 文本模式发出明确提示；CPU 回退路径已完成真实 PDF 验证。
+- MinerU 模型现已支持收敛到项目内 `.models/mineru/`：安装阶段会优先迁移已有全局模型，转换阶段默认优先读项目内本地配置，便于整个项目一起迁移、备份和删除。

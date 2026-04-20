@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -13,6 +12,7 @@ from pandoc_to_markdown.installer import (
     get_env_dir,
     get_env_executable,
     get_env_python,
+    get_mineru_project_state,
     is_supported_python,
 )
 
@@ -53,7 +53,6 @@ def _build_env_report(project_root: Path, env_name: str, executables: list[str])
 def build_report(project_root: Path) -> dict:
     version = sys.version_info[:3]
     envs_root = project_root / MANAGED_ENVS_DIRNAME
-    mineru_config = Path.home() / "mineru.json"
     disk = shutil.disk_usage(project_root)
 
     envs = {
@@ -81,11 +80,7 @@ def build_report(project_root: Path) -> dict:
             "mineru_models_download": resolve_cli_path("mineru-models-download"),
         },
         "envs": envs,
-        "mineru": {
-            "config_exists": mineru_config.exists(),
-            "config_path": str(mineru_config),
-            "model_source": os.environ.get("MINERU_MODEL_SOURCE", "huggingface"),
-        },
+        "mineru": get_mineru_project_state(project_root),
         "disk": {
             "free_bytes": disk.free,
             "free_gb": round(disk.free / (1024 ** 3), 2),
@@ -99,6 +94,8 @@ def build_report(project_root: Path) -> dict:
         report["warnings"].append(
             "Current launcher Python is outside MinerU's supported range, but the managed environments can still be healthy."
         )
+    if report["mineru"]["global_config_exists"] and not report["mineru"]["config_exists"]:
+        report["warnings"].append("A global ~/mineru.json exists, but this project has not created its own project-local MinerU config yet.")
     return report
 
 
@@ -115,5 +112,8 @@ def print_report(report: dict, as_json: bool) -> None:
     print(f"mineru-models-download: {report['cli']['mineru_models_download'] or 'missing'}")
     for env_name, env in report['envs'].items():
         print(f"{env_name} env: {'present' if env['exists'] else 'missing'} ({env['python_version'] or 'unknown python'})")
-    print(f"MinerU config: {'present' if report['mineru']['config_exists'] else 'missing'}")
+    print(f"MinerU project config: {'present' if report['mineru']['config_exists'] else 'missing'}")
+    print(f"MinerU project model source: {report['mineru']['model_source']}")
+    print(f"MinerU pipeline models: {report['mineru']['pipeline_path'] or 'missing'}")
+    print(f"MinerU VLM models: {report['mineru']['vlm_path'] or 'missing'}")
     print(f"Free disk: {report['disk']['free_gb']} GB")

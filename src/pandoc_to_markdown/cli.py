@@ -80,7 +80,7 @@ def print_recovery_hint(item: dict) -> None:
     print("模型下载被中断了，重新执行同一条转换或模型下载命令即可继续，不需要从头开始。")
     if str(item.get("error") or "").startswith("MINERU"):
         print('如需先补齐模型，可运行：PYTHONPATH="$PWD/src" python3 scripts/download_models.py --source huggingface --model-type all')
-    print("如果多次都卡在同一个 .incomplete 文件，再删除那个 .incomplete 文件后重试；不要清空整个 ~/.cache/huggingface。")
+    print("如果多次都卡在同一个 .incomplete 文件，再删除那个 .incomplete 文件后重试；不要清空整个项目内 .models/mineru/huggingface。")
 
 
 def print_payload(payload: dict, as_json: bool) -> None:

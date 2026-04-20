@@ -1,6 +1,7 @@
 .venv/
 .venvs/
 outputs/
+.models/
 __pycache__/
 *.pyc
 .DS_Store

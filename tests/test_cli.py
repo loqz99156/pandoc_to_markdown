@@ -44,7 +44,7 @@ class PrintPayloadTests(unittest.TestCase):
                 "FAIL /tmp/b.pdf :: download stopped at /Users/x/.cache/huggingface/blob.incomplete after Connection reset",
                 "模型下载被中断了，重新执行同一条转换或模型下载命令即可继续，不需要从头开始。",
                 '如需先补齐模型，可运行：PYTHONPATH="$PWD/src" python3 scripts/download_models.py --source huggingface --model-type all',
-                "如果多次都卡在同一个 .incomplete 文件，再删除那个 .incomplete 文件后重试；不要清空整个 ~/.cache/huggingface。",
+                "如果多次都卡在同一个 .incomplete 文件，再删除那个 .incomplete 文件后重试；不要清空整个项目内 .models/mineru/huggingface。",
             ],
         )
 

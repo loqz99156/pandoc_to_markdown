@@ -2,6 +2,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from pandoc_to_markdown.installer import build_mineru_env
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
 
 def convert_pdf_with_mineru(
     src: Path,
@@ -40,6 +46,7 @@ def convert_pdf_with_mineru(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=build_mineru_env(_project_root()),
     )
 
     assert proc.stdout is not None
