@@ -5,15 +5,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-MODEL_SOURCES = ("huggingface", "modelscope")
-MODEL_TYPES = ("pipeline", "vlm", "all")
-
 from pandoc_to_markdown.bootstrap import ensure_pandoc
 from pandoc_to_markdown.config import (
     CORE_ENV_NAME,
     MANAGED_ENVS_DIRNAME,
     MARKER_ENV_NAME,
     MARKER_PACKAGE_NAME,
+    MARKER_PROJECT_DIRNAME,
     MINERU_ENV_NAME,
     MINERU_PACKAGE_NAME,
     MINERU_PIPELINE_REPO_DIRNAME,
@@ -40,7 +38,7 @@ ENV_DEPENDENCIES = {
 CLI_BY_ENV = {
     CORE_ENV_NAME: [],
     MARKER_ENV_NAME: ["marker_single"],
-    MINERU_ENV_NAME: ["mineru", "mineru-models-download"],
+    MINERU_ENV_NAME: ["mineru"],
 }
 MINERU_REPO_DIR_BY_MODEL_TYPE = {
     "pipeline": MINERU_PIPELINE_REPO_DIRNAME,
@@ -100,6 +98,10 @@ def get_envs_root(project_root: Path) -> Path:
 
 def get_env_dir(project_root: Path, env_name: str) -> Path:
     return get_envs_root(project_root) / env_name
+
+
+def get_marker_assets_root(project_root: Path) -> Path:
+    return project_root / PROJECT_MODELS_DIRNAME / MARKER_PROJECT_DIRNAME
 
 
 def get_mineru_assets_root(project_root: Path) -> Path:
@@ -210,35 +212,6 @@ def sync_project_mineru_config(project_root: Path) -> Path:
     return config_path
 
 
-def _copy_model_tree(source_dir: Path, destination_dir: Path) -> Path:
-    destination_dir.parent.mkdir(parents=True, exist_ok=True)
-    if source_dir.resolve() == destination_dir.resolve():
-        return destination_dir
-    shutil.copytree(source_dir, destination_dir, dirs_exist_ok=True)
-    return destination_dir
-
-
-def migrate_global_mineru_models(project_root: Path) -> dict[str, str]:
-    global_config = _read_json_file(get_global_mineru_config_path())
-    if global_config is None:
-        return {}
-
-    migrated: dict[str, str] = {}
-    for model_type in ("pipeline", "vlm"):
-        if discover_project_mineru_model_dir(project_root, model_type) is not None:
-            continue
-        source_dir = _get_configured_model_dir(global_config, model_type)
-        if source_dir is None or not source_dir.exists() or not source_dir.is_dir():
-            continue
-        destination_dir = get_mineru_snapshot_root(project_root, model_type) / source_dir.name
-        migrated[model_type] = str(_copy_model_tree(source_dir, destination_dir))
-
-    if migrated:
-        sync_project_mineru_config(project_root)
-
-    return migrated
-
-
 def build_mineru_env(project_root: Path, model_source: str | None = None) -> dict[str, str]:
     assets_root = get_mineru_assets_root(project_root)
     assets_root.mkdir(parents=True, exist_ok=True)
@@ -280,11 +253,6 @@ def get_mineru_project_state(project_root: Path) -> dict:
         "global_config_exists": get_global_mineru_config_path().exists(),
         "global_config_path": str(get_global_mineru_config_path()),
     }
-
-
-def has_project_mineru_models(project_root: Path, model_type: str) -> bool:
-    required_types = ("pipeline", "vlm") if model_type == "all" else (model_type,)
-    return all(discover_project_mineru_model_dir(project_root, item) is not None for item in required_types)
 
 
 def create_venv(venv_dir: Path, python_bin: str) -> Path:
@@ -369,43 +337,9 @@ def install_env(project_root: Path, env_name: str, python_bin: str) -> dict:
     }
 
 
-def download_mineru_models(project_root: Path, model_source: str = "huggingface", model_type: str = "all") -> dict:
-    if model_source not in MODEL_SOURCES:
-        raise RuntimeError(f"Unsupported MinerU model source: {model_source}")
-    if model_type not in MODEL_TYPES:
-        raise RuntimeError(f"Unsupported MinerU model type: {model_type}")
-
-    executable = get_env_executable(project_root, MINERU_ENV_NAME, "mineru-models-download")
-    if not executable.exists():
-        raise RuntimeError("mineru-models-download is unavailable in the managed MinerU environment.")
-
-    command = [str(executable), "--source", model_source, "--model_type", model_type]
-    proc = subprocess.run(command, capture_output=True, text=True, env=build_mineru_env(project_root, model_source=model_source))
-    detail = (proc.stderr or proc.stdout).strip()
-    if proc.returncode != 0:
-        raise RuntimeError(detail or "MinerU model download failed.")
-
-    sync_project_mineru_config(project_root)
-    project_state = get_mineru_project_state(project_root)
-    return {
-        "ok": True,
-        "command": command,
-        "model_source": model_source,
-        "model_type": model_type,
-        "detail": detail,
-        "config_path": project_state["config_path"],
-        "hf_home": project_state["hf_home"],
-        "pipeline_path": project_state["pipeline_path"],
-        "vlm_path": project_state["vlm_path"],
-    }
-
-
 def run_install(
     project_root: Path,
     explicit_python: str | None = None,
-    preload_models: bool = False,
-    model_source: str = "huggingface",
-    model_type: str = "all",
 ) -> dict:
     python_bin, version = find_supported_python(explicit_python)
     get_envs_root(project_root).mkdir(parents=True, exist_ok=True)
@@ -415,10 +349,7 @@ def run_install(
     marker_env = install_env(project_root, MARKER_ENV_NAME, python_bin)
     mineru_env = install_env(project_root, MINERU_ENV_NAME, python_bin)
 
-    migrated_models = migrate_global_mineru_models(project_root)
-    sync_project_mineru_config(project_root)
-
-    result = {
+    return {
         "ok": True,
         "python": python_bin,
         "python_version": ".".join(map(str, version)),
@@ -429,26 +360,5 @@ def run_install(
             MINERU_ENV_NAME: mineru_env,
         },
         "pandoc": pandoc_path,
-        "models_downloaded": False,
-        "models_migrated": migrated_models,
         "mineru": get_mineru_project_state(project_root),
     }
-
-    if preload_models:
-        if has_project_mineru_models(project_root, model_type):
-            result["models_status"] = "migrated" if migrated_models else "reused"
-            result["models_source"] = "local"
-            result["models_type"] = model_type
-            result["models_detail"] = (
-                "Migrated existing MinerU models into the project." if migrated_models else "Reused project-local MinerU models."
-            )
-        else:
-            models_result = download_mineru_models(project_root, model_source=model_source, model_type=model_type)
-            result["models_downloaded"] = True
-            result["models_status"] = "downloaded"
-            result["models_source"] = models_result["model_source"]
-            result["models_type"] = models_result["model_type"]
-            result["models_detail"] = models_result["detail"]
-            result["mineru"] = get_mineru_project_state(project_root)
-
-    return result

@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import ANY, patch
 
 from pandoc_to_markdown import routing
-from pandoc_to_markdown.converters import marker_backend
 
 
 class NormalizeExtsTests(unittest.TestCase):
@@ -46,11 +45,12 @@ class RunConversionTests(unittest.TestCase):
         with patch("pandoc_to_markdown.routing.ensure_pandoc", return_value="/bin/pandoc") as ensure_pandoc, patch(
             "pandoc_to_markdown.routing.convert_non_pdf_with_pandoc",
             return_value={"ok": True, "input": str(source), "output": "/tmp/book.md"},
-        ) as convert_non_pdf:
+        ) as convert_non_pdf, patch("pandoc_to_markdown.routing.postprocess_markdown_file") as postprocess_markdown_file:
             payload = routing.run_conversion([source], None, overwrite=True, to_format="commonmark_x", pdf_engine="marker")
 
         ensure_pandoc.assert_called_once_with()
         convert_non_pdf.assert_called_once_with(source, None, True, "commonmark_x", "/bin/pandoc")
+        postprocess_markdown_file.assert_called_once_with(Path("/tmp/book.md"))
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["count"], 1)
 
@@ -72,11 +72,11 @@ class RunConversionTests(unittest.TestCase):
 
         with patch("pandoc_to_markdown.routing.ensure_marker", return_value="/bin/marker_single") as ensure_marker, patch(
             "pandoc_to_markdown.routing.convert_pdf_with_marker",
-            side_effect=lambda src, out_dir, overwrite, marker_bin, progress_callback=None: (
-                progress_callback({"type": "MODEL_DOWNLOAD_STARTED", "engine": "marker", "message": "首次使用 Marker，需要先下载模型，下载完成后会继续转换。"})
+            side_effect=lambda src, out_dir, overwrite, marker_bin, progress_callback=None, marker_mode='auto': (
+                progress_callback({"type": "MODEL_DOWNLOAD_STARTED", "engine": "marker", "message": "首次使用 Marker，需要先下载模型，下载完成后会继续转换。", "models": [{"name": "layout", "download_url": "https://models.datalab.to/layout/2025_09_23/manifest.json", "model_size": "1.35 GB"}]})
                 or {"ok": True, "input": str(src), "output": "/tmp/book.md"}
             ),
-        ) as convert_pdf:
+        ) as convert_pdf, patch("pandoc_to_markdown.routing.postprocess_markdown_file") as postprocess_markdown_file:
             payload = routing.run_conversion(
                 [source],
                 None,
@@ -87,9 +87,11 @@ class RunConversionTests(unittest.TestCase):
             )
 
         ensure_marker.assert_called_once_with()
-        convert_pdf.assert_called_once_with(source, None, False, "/bin/marker_single", progress_callback=ANY)
+        convert_pdf.assert_called_once_with(source, None, False, "/bin/marker_single", progress_callback=ANY, marker_mode="auto")
+        postprocess_markdown_file.assert_called_once_with(Path("/tmp/book.md"))
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["notices"][0]["type"], "MODEL_DOWNLOAD_STARTED")
+        self.assertEqual(payload["notices"][0]["models"][0]["download_url"], "https://models.datalab.to/layout/2025_09_23/manifest.json")
         self.assertEqual(events[0]["engine"], "marker")
 
     def test_run_conversion_uses_mineru_for_pdf(self) -> None:
@@ -97,11 +99,12 @@ class RunConversionTests(unittest.TestCase):
         with patch("pandoc_to_markdown.routing.ensure_mineru", return_value="/bin/mineru") as ensure_mineru, patch(
             "pandoc_to_markdown.routing.convert_pdf_with_mineru",
             return_value={"ok": True, "input": str(source), "output": "/tmp/book.md"},
-        ) as convert_pdf:
-            payload = routing.run_conversion([source], None, overwrite=True, to_format="commonmark_x", pdf_engine="mineru")
+        ) as convert_pdf, patch("pandoc_to_markdown.routing.postprocess_markdown_file") as postprocess_markdown_file:
+            payload = routing.run_conversion([source], None, overwrite=True, to_format="commonmark_x", pdf_engine="mineru", marker_mode="cpu")
 
         ensure_mineru.assert_called_once_with()
         convert_pdf.assert_called_once_with(source, None, True, "/bin/mineru", progress_callback=ANY)
+        postprocess_markdown_file.assert_called_once_with(Path("/tmp/book.md"))
         self.assertTrue(payload["ok"])
 
     def test_run_conversion_reports_unsupported_suffix(self) -> None:
@@ -110,6 +113,17 @@ class RunConversionTests(unittest.TestCase):
 
         self.assertFalse(payload["ok"])
         self.assertEqual(payload["results"][0]["error"], "UNSUPPORTED_INPUT_FORMAT")
+
+    def test_run_conversion_skips_postprocess_for_failed_result(self) -> None:
+        source = Path("/tmp/book.html")
+        with patch("pandoc_to_markdown.routing.ensure_pandoc", return_value="/bin/pandoc"), patch(
+            "pandoc_to_markdown.routing.convert_non_pdf_with_pandoc",
+            return_value={"ok": False, "input": str(source), "error": "PANDOC_FAILED", "detail": "broken"},
+        ), patch("pandoc_to_markdown.routing.postprocess_markdown_file") as postprocess_markdown_file:
+            payload = routing.run_conversion([source], None, overwrite=False, to_format="commonmark_x", pdf_engine="marker")
+
+        postprocess_markdown_file.assert_not_called()
+        self.assertFalse(payload["ok"])
 
 
 if __name__ == "__main__":

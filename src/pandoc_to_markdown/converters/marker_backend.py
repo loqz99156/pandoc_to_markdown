@@ -3,9 +3,15 @@ import subprocess
 from pathlib import Path
 
 from pandoc_to_markdown.config import MARKER_SUPPORTED_OUTPUT_FORMAT
+from pandoc_to_markdown.installer import get_marker_assets_root
+from pandoc_to_markdown.model_metadata import get_download_metadata
 
 
 MARKER_CPU_RETRY_NOTICE = 'Marker 在当前加速设备上失败，正在切到 CPU 重试，可能会更慢。'
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[3]
 
 
 def get_marker_output_path(src: Path, target_dir: Path) -> Path:
@@ -41,8 +47,9 @@ def build_marker_command(
     return command
 
 
-def build_marker_env(torch_device: str | None = None) -> dict[str, str]:
+def build_marker_env(project_root: Path, torch_device: str | None = None) -> dict[str, str]:
     env = os.environ.copy()
+    env['MODEL_CACHE_DIR'] = str(get_marker_assets_root(project_root))
     if torch_device is not None:
         env['TORCH_DEVICE'] = torch_device
     return env
@@ -83,7 +90,7 @@ def run_marker_command(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        env=build_marker_env(torch_device),
+        env=build_marker_env(_project_root(), torch_device),
     )
 
     assert proc.stdout is not None
@@ -104,6 +111,7 @@ def run_marker_command(
                     'engine': 'marker',
                     'message': '首次使用 Marker，需要先下载模型，下载完成后会继续转换。',
                     'line': line,
+                    **get_download_metadata('marker'),
                 }
             )
         progress_callback(
@@ -124,6 +132,7 @@ def convert_pdf_with_marker(
     overwrite: bool,
     marker_bin: str,
     progress_callback=None,
+    marker_mode: str = 'auto',
 ) -> dict:
     target_dir = out_dir if out_dir is not None else src.parent
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -137,14 +146,16 @@ def convert_pdf_with_marker(
             'error': 'OUTPUT_EXISTS',
         }
 
+    initial_torch_device = 'cpu' if marker_mode == 'cpu' else None
     returncode, detail, download_started = run_marker_command(
         src,
         target_dir,
         marker_bin,
         progress_callback=progress_callback,
+        torch_device=initial_torch_device,
     )
 
-    if returncode != 0 and looks_like_marker_device_crash(detail):
+    if marker_mode != 'cpu' and returncode != 0 and looks_like_marker_device_crash(detail):
         if progress_callback is not None:
             progress_callback(
                 {

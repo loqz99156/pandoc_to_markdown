@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pandoc_to_markdown.config import DEFAULT_EXTS, PANDOC_TARGET_FORMAT
 from pandoc_to_markdown.doctor import build_report, print_report
-from pandoc_to_markdown.installer import MODEL_SOURCES, MODEL_TYPES, run_install
+from pandoc_to_markdown.installer import run_install
 from pandoc_to_markdown.routing import resolve_sources, run_conversion
 
 
@@ -30,6 +30,18 @@ def build_progress_printer(as_json: bool):
             return
         seen_messages.add(message)
         print(message)
+        if event.get("type") == "MODEL_DOWNLOAD_STARTED":
+            for model in event.get("models", []):
+                name = model.get("name") or "model"
+                download_url = model.get("download_url")
+                model_size = model.get("model_size")
+                details = []
+                if download_url:
+                    details.append(f"链接: {download_url}")
+                if model_size:
+                    details.append(f"大小: {model_size}")
+                if details:
+                    print(f"- {name} ({', '.join(details)})")
 
     return handle
 
@@ -50,13 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
     convert_parser.add_argument("--out-dir", default=None)
     convert_parser.add_argument("--overwrite", action="store_true")
     convert_parser.add_argument("--pdf-engine", choices=["marker", "mineru"], default="marker")
+    convert_parser.add_argument("--marker-mode", choices=["auto", "cpu"], default="auto")
     convert_parser.add_argument("--json", action="store_true")
 
     install_parser = subparsers.add_parser("install", help="Prepare local environment")
     install_parser.add_argument("--python", default=None, help="Explicit Python executable")
-    install_parser.add_argument("--preload-models", action="store_true")
-    install_parser.add_argument("--model-source", choices=MODEL_SOURCES, default="huggingface")
-    install_parser.add_argument("--model-type", choices=MODEL_TYPES, default="all")
     install_parser.add_argument("--json", action="store_true")
 
     doctor_parser = subparsers.add_parser("doctor", help="Inspect local environment")
@@ -77,9 +87,7 @@ def looks_like_interrupted_model_download(item: dict) -> bool:
 
 
 def print_recovery_hint(item: dict) -> None:
-    print("模型下载被中断了，重新执行同一条转换或模型下载命令即可继续，不需要从头开始。")
-    if str(item.get("error") or "").startswith("MINERU"):
-        print('如需先补齐模型，可运行：PYTHONPATH="$PWD/src" python3 scripts/download_models.py --source huggingface --model-type all')
+    print("模型下载被中断了，重新执行同一条转换命令即可继续，不需要从头开始。")
     print("如果多次都卡在同一个 .incomplete 文件，再删除那个 .incomplete 文件后重试；不要清空整个项目内 .models/mineru/huggingface。")
 
 
@@ -124,6 +132,7 @@ def main() -> None:
             overwrite=args.overwrite,
             to_format=args.to,
             pdf_engine=args.pdf_engine,
+            marker_mode=args.marker_mode,
             progress_callback=build_progress_printer(args.json),
         )
         print_payload(payload, args.json)
@@ -133,13 +142,7 @@ def main() -> None:
 
     if args.command == "install":
         project_root = Path(__file__).resolve().parents[2]
-        payload = run_install(
-            project_root,
-            explicit_python=args.python,
-            preload_models=args.preload_models,
-            model_source=args.model_source,
-            model_type=args.model_type,
-        )
+        payload = run_install(project_root, explicit_python=args.python)
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:

@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 from pandoc_to_markdown.installer import build_mineru_env
+from pandoc_to_markdown.model_metadata import get_download_metadata
 
 
 def _project_root() -> Path:
@@ -67,6 +68,7 @@ def convert_pdf_with_mineru(
                     'engine': 'mineru',
                     'message': '首次使用 MinerU，需要先下载模型，下载完成后会继续转换。',
                     'line': line,
+                    **get_download_metadata('mineru'),
                 }
             )
         progress_callback(

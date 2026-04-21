@@ -5,6 +5,7 @@ from pandoc_to_markdown.config import DEFAULT_EXTS, MARKER_INSTALL_HINT, MINERU_
 from pandoc_to_markdown.converters.marker_backend import convert_pdf_with_marker
 from pandoc_to_markdown.converters.mineru_backend import convert_pdf_with_mineru
 from pandoc_to_markdown.converters.pandoc_backend import convert_non_pdf_with_pandoc
+from pandoc_to_markdown.markdown_postprocess import postprocess_markdown_file
 
 
 def normalize_exts(ext_string: str) -> set[str]:
@@ -41,6 +42,7 @@ def run_conversion(
     overwrite: bool,
     to_format: str,
     pdf_engine: str,
+    marker_mode: str = 'auto',
     progress_callback=None,
 ) -> dict:
     need_pandoc = any(src.suffix.lower() in PANDOC_INPUT_SUFFIXES for src in sources)
@@ -77,33 +79,45 @@ def run_conversion(
         suffix = src.suffix.lower()
         if suffix == PDF_INPUT_SUFFIX:
             if pdf_engine_bin is None:
-                results.append({
+                result = {
                     'ok': False,
                     'input': str(src),
                     'error': f'{pdf_engine.upper()}_NOT_INSTALLED',
                     'detail': pdf_engine_error or (MINERU_INSTALL_HINT if pdf_engine == 'mineru' else MARKER_INSTALL_HINT),
-                })
+                }
             elif pdf_engine == 'mineru':
-                results.append(convert_pdf_with_mineru(src, out_dir, overwrite, pdf_engine_bin, progress_callback=emit_progress))
+                result = convert_pdf_with_mineru(src, out_dir, overwrite, pdf_engine_bin, progress_callback=emit_progress)
             else:
-                results.append(convert_pdf_with_marker(src, out_dir, overwrite, pdf_engine_bin, progress_callback=emit_progress))
+                result = convert_pdf_with_marker(
+                    src,
+                    out_dir,
+                    overwrite,
+                    pdf_engine_bin,
+                    progress_callback=emit_progress,
+                    marker_mode=marker_mode,
+                )
         elif suffix in PANDOC_INPUT_SUFFIXES:
             if pandoc_bin is None:
-                results.append({
+                result = {
                     'ok': False,
                     'input': str(src),
                     'error': 'PANDOC_NOT_INSTALLED',
                     'detail': pandoc_error or 'Pandoc is required for non-PDF document conversion.',
-                })
+                }
             else:
-                results.append(convert_non_pdf_with_pandoc(src, out_dir, overwrite, to_format, pandoc_bin))
+                result = convert_non_pdf_with_pandoc(src, out_dir, overwrite, to_format, pandoc_bin)
         else:
-            results.append({
+            result = {
                 'ok': False,
                 'input': str(src),
                 'error': 'UNSUPPORTED_INPUT_FORMAT',
                 'detail': f'Unsupported input format: {suffix or "<none>"}',
-            })
+            }
+
+        if result.get('ok') and result.get('output'):
+            postprocess_markdown_file(Path(result['output']))
+
+        results.append(result)
 
     return {
         'ok': all(item.get('ok') for item in results),

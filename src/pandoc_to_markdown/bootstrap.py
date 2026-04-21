@@ -35,7 +35,6 @@ from pandoc_to_markdown.config import (
 MANAGED_ENV_BY_EXECUTABLE = {
     "marker_single": MARKER_ENV_NAME,
     "mineru": MINERU_ENV_NAME,
-    "mineru-models-download": MINERU_ENV_NAME,
     "pandoc": CORE_ENV_NAME,
 }
 

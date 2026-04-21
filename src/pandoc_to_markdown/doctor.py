@@ -58,7 +58,7 @@ def build_report(project_root: Path) -> dict:
     envs = {
         CORE_ENV_NAME: _build_env_report(project_root, CORE_ENV_NAME, ["pandoc"]),
         MARKER_ENV_NAME: _build_env_report(project_root, MARKER_ENV_NAME, ["marker_single"]),
-        MINERU_ENV_NAME: _build_env_report(project_root, MINERU_ENV_NAME, ["mineru", "mineru-models-download"]),
+        MINERU_ENV_NAME: _build_env_report(project_root, MINERU_ENV_NAME, ["mineru"]),
     }
 
     report = {
@@ -77,7 +77,6 @@ def build_report(project_root: Path) -> dict:
             "pandoc": resolve_cli_path("pandoc"),
             "marker_single": resolve_cli_path("marker_single"),
             "mineru": resolve_cli_path("mineru"),
-            "mineru_models_download": resolve_cli_path("mineru-models-download"),
         },
         "envs": envs,
         "mineru": get_mineru_project_state(project_root),
@@ -94,8 +93,6 @@ def build_report(project_root: Path) -> dict:
         report["warnings"].append(
             "Current launcher Python is outside MinerU's supported range, but the managed environments can still be healthy."
         )
-    if report["mineru"]["global_config_exists"] and not report["mineru"]["config_exists"]:
-        report["warnings"].append("A global ~/mineru.json exists, but this project has not created its own project-local MinerU config yet.")
     return report
 
 
@@ -109,9 +106,9 @@ def print_report(report: dict, as_json: bool) -> None:
     print(f"pandoc: {report['cli']['pandoc'] or 'missing'}")
     print(f"marker_single: {report['cli']['marker_single'] or 'missing'}")
     print(f"mineru: {report['cli']['mineru'] or 'missing'}")
-    print(f"mineru-models-download: {report['cli']['mineru_models_download'] or 'missing'}")
     for env_name, env in report['envs'].items():
         print(f"{env_name} env: {'present' if env['exists'] else 'missing'} ({env['python_version'] or 'unknown python'})")
+    print(f"MinerU assets root: {report['mineru']['assets_root']}")
     print(f"MinerU project config: {'present' if report['mineru']['config_exists'] else 'missing'}")
     print(f"MinerU project model source: {report['mineru']['model_source']}")
     print(f"MinerU pipeline models: {report['mineru']['pipeline_path'] or 'missing'}")
