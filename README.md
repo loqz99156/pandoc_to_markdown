@@ -12,6 +12,13 @@
 - 转换完成后默认做一轮 Markdown 轻量后处理
 - 自带 Claude Code skill，可在 Claude 中直接调用
 
+## 安装前提
+
+- 机器上需要有可用的 Python `3.10` 到 `3.13`，因为当前安装器会同时准备 `core`、`marker` 和 `mineru` 三套环境
+- 如果你打算在 Claude Code 里直接让 AI 帮你安装，需要先能正常使用 Claude Code
+- 首次执行 PDF 转换时需要联网下载对应模型
+- 需要有本地文件读写权限，用来创建 `.venvs/`、`.models/` 和 `outputs/`
+
 ## 快速安装
 
 如果你在 Claude Code 里，可以直接用自然语言让 AI 帮你安装。
