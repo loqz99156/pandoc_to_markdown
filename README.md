@@ -14,108 +14,35 @@
 
 ## 快速安装
 
-### macOS / Linux
+如果你在 Claude Code 里，可以直接用自然语言让 AI 帮你安装。
 
-```bash
-bash install.sh
-```
+例如：
 
-### Windows
+- `帮我安装这个项目`
+- `帮我把 pandoc-to-markdown 安装好，然后做一遍 doctor 检查`
+- `用 python3.12 安装这个项目`
 
-```powershell
-./install.ps1
-```
-
-如果你想显式指定 Python：
-
-```bash
-PYTHONPATH="$PWD/src" python3 scripts/setup_env.py --python /path/to/python3.12
-```
-
-安装完成后，项目会准备这些环境：
-
-- `.venvs/core`
-- `.venvs/marker`
-- `.venvs/mineru`
+AI 会按项目内安装流程准备 `.venvs/core`、`.venvs/marker`、`.venvs/mineru`，并在需要时继续做自检。
 
 ## 快速使用
 
-### 1. 自检
+如果你在 Claude Code 里，最简单的方式是直接用自然语言描述你的目标。
 
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py doctor --json
+例如：
+
+- `把 /Users/me/Desktop/book.docx 转成 Markdown`
+- `把 /Users/me/Desktop/report.pdf 转成 Markdown，输出到 /Users/me/Desktop/md-out`
+- `批量转换 /Users/me/Desktop/inbox 里的 PDF 和 DOCX`
+- `用 Marker 转这个 PDF`
+- `用 MinerU 转这个扫描版 PDF`
+
+也可以直接调用内置 skill：
+
+```text
+/pandoc_to_markdown
 ```
 
-### 2. 转换单个非 PDF 文件
-
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
-  convert \
-  --mode single \
-  --paths "/path/to/book.html" \
-  --overwrite \
-  --json
-```
-
-### 3. 转换单个 PDF 文件
-
-使用 Marker：
-
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
-  convert \
-  --mode single \
-  --paths "/path/to/book.pdf" \
-  --pdf-engine marker \
-  --overwrite \
-  --json
-```
-
-如果你希望 Marker 从一开始固定走 CPU：
-
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
-  convert \
-  --mode single \
-  --paths "/path/to/book.pdf" \
-  --pdf-engine marker \
-  --marker-mode cpu \
-  --overwrite \
-  --json
-```
-
-使用 MinerU：
-
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
-  convert \
-  --mode single \
-  --paths "/path/to/book.pdf" \
-  --pdf-engine mineru \
-  --overwrite \
-  --json
-```
-
-### 4. 批量转换目录
-
-```bash
-PYTHONPATH="$PWD/src" python3 src/pandoc_to_markdown/cli.py \
-  convert \
-  --mode batch \
-  --paths "/path/to/inbox" \
-  --exts "epub,docx,html,pdf" \
-  --recursive \
-  --out-dir "/tmp/md-out" \
-  --overwrite \
-  --json
-```
-
-### 5. 默认行为
-
-- 默认输出到项目目录下的 `outputs/`
-- 默认目标格式是 `commonmark_x`
-- 默认不覆盖已有文件，除非显式传 `--overwrite`
-- 首次真正触发 PDF 转换时，相关模型会自动下载到项目内 `.models/`
+skill 会继续询问模式、输出方式、转换后端和路径，然后自动执行转换。
 
 ## Claude Code skill
 
